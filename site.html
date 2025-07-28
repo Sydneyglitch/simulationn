@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Великий фильтр — Эволюционная симуляция</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 40px;
+      background-color: #f9f9f9;
+    }
+    .content {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%;
+      height: 280px;
+      font-family: monospace;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="content">
+
+  <h2>Результаты симуляции (Monte Carlo)</h2>
+  <button onclick="runSimulation()">Запустить симуляцию</button>
+  <textarea id="output" readonly></textarea>
+
+  <canvas id="chart" width="800" height="400"></canvas>
+</div>
+
+<script>
+function simulateWithEfficiency(minTimes, totalTime) {
+  let timeLeft = totalTime;
+  let durations = Array(minTimes.length).fill(0);
+  let efficiency = 1.0;
+
+  for (let i = 0; i < minTimes.length; i++) {
+    const minT = minTimes[i];
+    timeLeft -= minT;
+    if (timeLeft < 0) return null;
+    durations[i] = minT;
+  }
+
+  let remainingTime = timeLeft;
+  for (let i = 0; i < minTimes.length; i++) {
+    let randomFactor = (Math.random() * (1.5 - 0.5) + 0.5) * efficiency;
+    let delta = randomFactor / (7 - i) * remainingTime;
+    durations[i] += delta;
+    remainingTime -= delta;
+    if (remainingTime < 0) break;
+    efficiency *= Math.max(0.7, Math.min(1.3, 1.2 - (delta / (minTimes[i] + 1e-6))));
+  }
+
+  return durations;
+}
+
+function runSimulation() {
+  const stepsYears = [400, 1100, 900, 500, 200, 1000, 0.8];
+  const totalTime = stepsYears.reduce((a, b) => a + b);
+  const stepNames = [
+    "РНК-жизнь",
+    "Прокариоты",
+    "Эукариоты",
+    "Половой механизм",
+    "Многоклеточные",
+    "Мозг",
+    "Цивилизация"
+  ];
+
+  let efficiencySimulations = [];
+  const nSimulations = 10000;
+
+  for (let i = 0; i < nSimulations; i++) {
+    let sim = simulateWithEfficiency(stepsYears, totalTime);
+    if (sim !== null) {
+      efficiencySimulations.push(sim);
+    }
+  }
+
+  let probabilities = Array(stepsYears.length).fill(0);
+  for (let step = 0; step < stepsYears.length; step++) {
+    let count = 0;
+    for (let sim of efficiencySimulations) {
+      if (sim[step] <= stepsYears[step]) count++;
+    }
+    probabilities[step] = count / efficiencySimulations.length;
+  }
+
+  // Text output
+  let output = "";
+  stepNames.forEach((desc, i) => {
+    output += `Шаг ${i + 1}: ${desc.padEnd(20)} — Вероятность успеть: ${(probabilities[i] * 100).toFixed(2)}%\n`;
+  });
+  document.getElementById("output").value = output;
+
+  // Chart output
+  const ctx = document.getElementById("chart").getContext("2d");
+  if (window.chartInstance) window.chartInstance.destroy(); // remove old chart if exists
+
+  window.chartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: stepNames,
+      datasets: [{
+        label: "Вероятность прохождения (%)",
+        data: probabilities.map(p => (p * 100).toFixed(2)),
+        backgroundColor: "rgba(54, 162, 235, 0.7)",
+        borderColor: "rgba(54, 162, 235, 1)",
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          title: {
+            display: true,
+            text: 'Вероятность (%)'
+          }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
