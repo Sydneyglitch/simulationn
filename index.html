@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Великий фильтр — Эволюционная симуляция</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 40px;
+      background-color: #f9f9f9;
+    }
+    .content {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    textarea {
+      width: 100%;
+      height: 280px;
+      font-family: monospace;
+      white-space: pre;
+      overflow-x: auto;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="content">
+  <p>
+    Как бы это не звучало эгоцентрично, для вычисления появления развитой жизни во вселенной (кроме людей) мы должны проанализировать человеческие этапы развития. Но мы принимаем этот антропоцентричный подход намеренно, потому что нас интересует эволюция сложных и разумных организмов, таких как мы сами. Не было обнаружено никаких доказательств существования технологически развитой жизни, кроме человеческой, что позволяет предположить, что такая технологически развитая жизнь существует только на незначительной части всех пригодных для жизни планет. Поэтому важным вопросом является то, существует ли то, что Робин Хэнсон называет «Великим фильтром».
+    <br><br>
+    Чтобы разобраться, где именно может прятаться Великий фильтр — на ранних этапах жизни, в развитии интеллекта или уже на пороге межзвёздной экспансии — мы провели численное моделирование на основе симуляций Монте-Карло. Модель включала семь последовательных эволюционных этапов: от зарождения РНК-жизни до возникновения человеческой цивилизации. Стоит заметить что мы не учли вероятность появления планеты и системы, пригодной для жизни, и последний шаг, во время которого цивилизация начнёт крайне быстро осваивать космос. Ведь по наблюдениям других солнечных систем можно понять что экзопланеты, и планеты на которых возможно существование жизни в привычном для нас понимании это вовсе не редкий случай, а что насчёт космической экспансии - мы точно не можем определить временной промежуток, за который цивилизация становится достаточно развитой для колонизации космоса, но если экстраполировать темп развития нашей цивилизации, то можно прийти к выводу что даже при нынешнем развитии - это не предоставит труда. Каждый шаг требовал строго определённого минимального времени и зависел от "эффективности" выполнения предыдущих: если один этап занимал меньше времени, это повышало шансы на ускорение следующего — как метафорический «природный бонус за ранний успех».
+    <br><br>
+    Результаты оказались неожиданными. Ранние этапы — возникновение жизни, прокариоты, эукариоты — оказались достаточно вероятными при заданном времени. А вот многоклеточность и особенно введение полового размножения стали узкими горлышками: вероятность их прохождения в модели оказалась менее 3%. Это указывает на то, что Великий фильтр, в данной модели, с большой вероятностью может находиться на этих промежуточных шагах, а не в зарождении жизни или в достижении технологической цивилизации, как предполагалось ранее.
+    <br><br>
+    Самое любопытное — модель предсказала, что если цивилизация всё-таки доходит до стадии разумного существа, вероятность стремительного прогресса — как у нас за 800 тысяч лет — становится удивительно высокой (~72%). Это указывает на то, что "вылет в космос" может быть естественным следствием накопленной биологической эффективности… но только если она доходит до стадии разума.
+  </p>
+
+  <h2>Результаты симуляции (Monte Carlo)</h2>
+  <button onclick="runSimulation()">Запустить симуляцию</button>
+  <textarea id="output" readonly></textarea>
+
+  <canvas id="chart" width="800" height="400"></canvas>
+</div>
+
+<script>
+function simulateWithEfficiency(minTimes, totalTime) {
+  let timeLeft = totalTime;
+  let durations = Array(minTimes.length).fill(0);
+  let efficiency = 1.0;
+
+  for (let i = 0; i < minTimes.length; i++) {
+    const minT = minTimes[i];
+    timeLeft -= minT;
+    if (timeLeft < 0) return null;
+    durations[i] = minT;
+  }
+
+  let remainingTime = timeLeft;
+  for (let i = 0; i < minTimes.length; i++) {
+    let randomFactor = (Math.random() * (1.5 - 0.5) + 0.5) * efficiency;
+    let delta = randomFactor / (7 - i) * remainingTime;
+    durations[i] += delta;
+    remainingTime -= delta;
+    if (remainingTime < 0) break;
+    efficiency *= Math.max(0.7, Math.min(1.3, 1.2 - (delta / (minTimes[i] + 1e-6))));
+  }
+
+  return durations;
+}
+
+function runSimulation() {
+  const stepsYears = [400, 1100, 900, 500, 200, 1000, 0.8];
+  const totalTime = stepsYears.reduce((a, b) => a + b);
+  const stepNames = [
+    "РНК-жизнь",
+    "Прокариоты",
+    "Эукариоты",
+    "Половой механизм",
+    "Многоклеточные",
+    "Мозг",
+    "Цивилизация"
+  ];
+
+  let efficiencySimulations = [];
+  const nSimulations = 10000;
+
+  for (let i = 0; i < nSimulations; i++) {
+    let sim = simulateWithEfficiency(stepsYears, totalTime);
+    if (sim !== null) {
+      efficiencySimulations.push(sim);
+    }
+  }
+
+  let probabilities = Array(stepsYears.length).fill(0);
+  for (let step = 0; step < stepsYears.length; step++) {
+    let count = 0;
+    for (let sim of efficiencySimulations) {
+      if (sim[step] <= stepsYears[step]) count++;
+    }
+    probabilities[step] = count / efficiencySimulations.length;
+  }
+
+  // Text output
+  let output = "";
+  stepNames.forEach((desc, i) => {
+    output += `Шаг ${i + 1}: ${desc.padEnd(20)} — Вероятность успеть: ${(probabilities[i] * 100).toFixed(2)}%\n`;
+  });
+  document.getElementById("output").value = output;
+
+  // Chart output
+  const ctx = document.getElementById("chart").getContext("2d");
+  if (window.chartInstance) window.chartInstance.destroy(); // remove old chart if exists
+
+  window.chartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: stepNames,
+      datasets: [{
+        label: "Вероятность прохождения (%)",
+        data: probabilities.map(p => (p * 100).toFixed(2)),
+        backgroundColor: "rgba(54, 162, 235, 0.7)",
+        borderColor: "rgba(54, 162, 235, 1)",
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true,
+          max: 100,
+          title: {
+            display: true,
+            text: 'Вероятность (%)'
+          }
+        }
+      },
+      plugins: {
+        legend: { display: false }
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
